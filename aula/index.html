@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<title>MagicBank Academy · Aula</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+<style>
+  body {
+    margin: 0;
+    font-family: Arial, Helvetica, sans-serif;
+    background: #0a1f44;
+    color: #ffffff;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+  }
+
+  header {
+    background: #081633;
+    padding: 16px;
+    text-align: center;
+    font-weight: bold;
+    font-size: 18px;
+    color: #c9a14a;
+  }
+
+  main {
+    flex: 1;
+    padding: 16px;
+    overflow-y: auto;
+  }
+
+  #chat {
+    background: #ffffff;
+    color: #000000;
+    border-radius: 10px;
+    padding: 15px;
+    max-width: 900px;
+    margin: 0 auto;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+  }
+
+  .msg {
+    margin-bottom: 14px;
+    line-height: 1.4;
+  }
+
+  .user {
+    font-weight: bold;
+    color: #0a1f44;
+  }
+
+  .tutor {
+    color: #333;
+  }
+
+  footer {
+    display: flex;
+    gap: 8px;
+    padding: 12px;
+    background: #081633;
+    border-top: 1px solid #1a2f66;
+  }
+
+  input {
+    flex: 1;
+    padding: 12px;
+    font-size: 16px;
+    border-radius: 6px;
+    border: none;
+  }
+
+  button {
+    padding: 12px 14px;
+    border: none;
+    border-radius: 6px;
+    font-weight: bold;
+    cursor: pointer;
+  }
+
+  #sendBtn {
+    background: #c9a14a;
+    color: #0a1f44;
+  }
+
+  #micBtn {
+    background: #102e6a;
+    color: #ffffff;
+    font-size: 18px;
+  }
+
+  button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+</style>
+</head>
+
+<body>
+
+<header>
+  MagicBank Academy · Aula
+</header>
+
+<main>
+  <div id="chat"></div>
+</main>
+
+<footer>
+  <input
+    type="text"
+    id="input"
+    placeholder="Escribe o habla con el tutor…"
+    autocomplete="off"
+  />
+  <button id="micBtn">🎤</button>
+  <button id="sendBtn">Enviar</button>
+</footer>
+
+<script>
+  const chat = document.getElementById("chat");
+  const input = document.getElementById("input");
+  const sendBtn = document.getElementById("sendBtn");
+  const micBtn = document.getElementById("micBtn");
+
+  const BACKEND_URL =
+    "https://magic-bank-backend-production-713e.up.railway.app/api/magicbank/aula/texto";
+
+  function addMessage(role, text) {
+    const div = document.createElement("div");
+    div.className = "msg";
+
+    if (role === "user") {
+      div.innerHTML = `<span class="user">Tú:</span> ${text}`;
+    } else {
+      div.innerHTML = `<span class="tutor">Tutor:</span> ${text}`;
+      speak(text); // 🔊 el tutor habla
+    }
+
+    chat.appendChild(div);
+    chat.scrollTop = chat.scrollHeight;
+  }
+
+  async function sendMessage(message) {
+    sendBtn.disabled = true;
+
+    try {
+      const res = await fetch(BACKEND_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message,
+          course_id: "academy",
+          profile: { preferred_name: "Gustavo" }
+        })
+      });
+
+      if (!res.ok) throw new Error("Backend no respondió");
+
+      const data = await res.json();
+
+      if (data?.text) {
+        addMessage("tutor", data.text);
+      } else {
+        addMessage("tutor", "Sin respuesta");
+      }
+
+    } catch (err) {
+      console.error(err);
+      addMessage("tutor", "Error de conexión con el aula");
+    } finally {
+      sendBtn.disabled = false;
+    }
+  }
+
+  sendBtn.addEventListener("click", () => {
+    const msg = input.value.trim();
+    if (!msg) return;
+    input.value = "";
+    addMessage("user", msg);
+    sendMessage(msg);
+  });
+
+  input.addEventListener("keypress", (e) => {
+    if (e.key === "Enter") sendBtn.click();
+  });
+
+  /* 🎤 MICRÓFONO (voz → texto) */
+  let recognition;
+  if ("webkitSpeechRecognition" in window) {
+    recognition = new webkitSpeechRecognition();
+    recognition.lang = "es-ES";
+    recognition.continuous = false;
+    recognition.interimResults = false;
+
+    recognition.onresult = (event) => {
+      const transcript = event.results[0][0].transcript;
+      input.value = transcript;
+    };
+
+    recognition.onerror = (e) => {
+      alert("Error con el micrófono");
+      console.error(e);
+    };
+  } else {
+    micBtn.disabled = true;
+    micBtn.textContent = "🚫";
+  }
+
+  micBtn.addEventListener("click", () => {
+    if (recognition) recognition.start();
+  });
+
+  /* 🔊 VOZ DEL TUTOR (texto → voz) */
+  function speak(text) {
+    if ("speechSynthesis" in window) {
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = "es-ES";
+      utterance.rate = 0.95;
+      utterance.pitch = 1;
+      speechSynthesis.speak(utterance);
+    }
+  }
+</script>
+
+</body>
+</html>
