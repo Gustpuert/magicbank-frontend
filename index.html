@@ -118,8 +118,9 @@
   const sendBtn = document.getElementById("send");
   const micBtn = document.getElementById("mic");
 
+  // 🔴 URL CORRECTA DEL BACKEND (RUTA REAL)
   const BACKEND_URL =
-    "https://magic-bank-backend-production-713e.up.railway.app/api/magicbank/aula";
+    "https://magic-bank-backend-production-713e.up.railway.app/api/magicbank/aula/texto";
 
   function addMessage(text, className) {
     const div = document.createElement("div");
@@ -138,7 +139,7 @@
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           course_id: "cocina",
-          message,
+          message: message,
           profile: { preferred_name: "Gustavo" }
         })
       });
@@ -152,7 +153,6 @@
       }
     } catch (err) {
       addMessage("Error de conexión con el backend.", "tutor");
-      console.error(err);
     }
   }
 
@@ -163,7 +163,7 @@
     sendMessage(message);
   });
 
-  /* 🎤 MICRÓFONO (Web Speech API) */
+  /* 🎤 MICRÓFONO */
   const SpeechRecognition =
     window.SpeechRecognition || window.webkitSpeechRecognition;
 
@@ -178,12 +178,11 @@
     });
 
     recognition.onresult = (event) => {
-      const transcript = event.results[0][0].transcript;
-      input.value = transcript;
+      input.value = event.results[0][0].transcript;
     };
 
-    recognition.onerror = (event) => {
-      alert("Error con el micrófono: " + event.error);
+    recognition.onerror = () => {
+      alert("Error con el micrófono");
     };
   } else {
     micBtn.disabled = true;
