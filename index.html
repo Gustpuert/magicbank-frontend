@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <title>MagicBank Academy · Aula</title>
+  <title>MagicBank Academy · Cocina</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <style>
@@ -10,6 +10,7 @@
       margin: 0;
       font-family: Arial, sans-serif;
       background: #f4f6fa;
+      color: #1a1a1a;
       display: flex;
       flex-direction: column;
       height: 100vh;
@@ -18,25 +19,37 @@
     header {
       background: #0a1f44;
       color: #c9a14a;
-      padding: 16px;
+      padding: 18px;
       text-align: center;
       font-weight: bold;
+      font-size: 18px;
+    }
+
+    main {
+      flex: 1;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
     }
 
     #chat {
       flex: 1;
-      padding: 16px;
+      background: white;
+      border-radius: 12px;
+      padding: 15px;
       overflow-y: auto;
-      background: #ffffff;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+      margin-bottom: 15px;
     }
 
     .msg {
-      margin-bottom: 10px;
+      margin-bottom: 12px;
+      line-height: 1.4;
     }
 
     .user {
-      color: #0a1f44;
       font-weight: bold;
+      color: #0a1f44;
     }
 
     .tutor {
@@ -45,25 +58,36 @@
 
     footer {
       display: flex;
-      padding: 10px;
-      border-top: 1px solid #ccc;
-      background: #fff;
+      padding: 15px;
+      background: #ffffff;
+      border-top: 1px solid #ddd;
+      align-items: center;
     }
 
     textarea {
       flex: 1;
       resize: none;
-      padding: 8px;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
       font-size: 14px;
     }
 
     button {
       margin-left: 8px;
       padding: 10px 14px;
-      font-weight: bold;
-      background: #c9a14a;
       border: none;
+      border-radius: 8px;
+      background: #c9a14a;
+      color: #0a1f44;
+      font-weight: bold;
       cursor: pointer;
+    }
+
+    button.mic {
+      background: #0a1f44;
+      color: #c9a14a;
+      font-size: 16px;
     }
   </style>
 </head>
@@ -71,13 +95,16 @@
 <body>
 
 <header>
-  MagicBank Academy · Aula
+  MagicBank Academy · Cocina
 </header>
 
-<div id="chat"></div>
+<main>
+  <div id="chat"></div>
+</main>
 
 <footer>
-  <textarea id="input" rows="2" placeholder="Escribe al tutor..."></textarea>
+  <textarea id="input" rows="2" placeholder="Escribe o habla con el tutor..."></textarea>
+  <button class="mic" id="mic">🎤</button>
   <button id="send">Enviar</button>
 </footer>
 
@@ -85,13 +112,15 @@
   const chat = document.getElementById("chat");
   const input = document.getElementById("input");
   const sendBtn = document.getElementById("send");
+  const micBtn = document.getElementById("mic");
 
+  // ✅ URL CORRECTA (CON /texto)
   const BACKEND_URL =
     "https://magic-bank-backend-production-713e.up.railway.app/api/magicbank/aula/texto";
 
-  function addMessage(text, cls) {
+  function addMessage(text, className) {
     const div = document.createElement("div");
-    div.className = "msg " + cls;
+    div.className = "msg " + className;
     div.textContent = text;
     chat.appendChild(div);
     chat.scrollTop = chat.scrollHeight;
@@ -101,7 +130,7 @@
     addMessage("Tú: " + message, "user");
 
     try {
-      const res = await fetch(BACKEND_URL, {
+      const response = await fetch(BACKEND_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -111,20 +140,44 @@
         })
       });
 
-      const data = await res.json();
-      addMessage("Tutor: " + (data.text || "Sin respuesta"), "tutor");
-    } catch (e) {
-      addMessage("❌ Error conectando con el backend", "tutor");
-      console.error(e);
+      if (!response.ok) {
+        throw new Error("Error HTTP " + response.status);
+      }
+
+      const data = await response.json();
+      addMessage("Tutor: " + data.text, "tutor");
+
+    } catch (err) {
+      addMessage("❌ Error al conectar con el backend", "tutor");
+      console.error(err);
     }
   }
 
+  // ✅ SEND FUNCIONA
   sendBtn.addEventListener("click", () => {
     const msg = input.value.trim();
     if (!msg) return;
     input.value = "";
     sendMessage(msg);
   });
+
+  // 🎤 MICRÓFONO
+  const SpeechRecognition =
+    window.SpeechRecognition || window.webkitSpeechRecognition;
+
+  if (SpeechRecognition) {
+    const recognition = new SpeechRecognition();
+    recognition.lang = "es-ES";
+
+    micBtn.addEventListener("click", () => recognition.start());
+
+    recognition.onresult = (event) => {
+      input.value = event.results[0][0].transcript;
+    };
+  } else {
+    micBtn.disabled = true;
+    micBtn.textContent = "🚫";
+  }
 </script>
 
 </body>
