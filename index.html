@@ -1,159 +1,145 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<title>MagicBank Academy · Aula</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <title>Aula MagicBank</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<style>
-body {
-  margin: 0;
-  font-family: Arial, sans-serif;
-  background: #f4f6fa;
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-}
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #050b1a;
+      color: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
 
-header {
-  background: #0a1f44;
-  color: #c9a14a;
-  padding: 16px;
-  text-align: center;
-  font-weight: bold;
-}
+    .container {
+      width: 100%;
+      max-width: 420px;
+      padding: 20px;
+      box-sizing: border-box;
+      background: #0b1430;
+      border-radius: 12px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.6);
+    }
 
-#chat {
-  flex: 1;
-  padding: 16px;
-  overflow-y: auto;
-  background: #fff;
-}
+    h1 {
+      text-align: center;
+      margin-bottom: 10px;
+      font-size: 20px;
+    }
 
-.msg {
-  margin-bottom: 12px;
-}
+    textarea {
+      width: 100%;
+      height: 90px;
+      border-radius: 8px;
+      border: none;
+      padding: 10px;
+      resize: none;
+      font-size: 14px;
+    }
 
-.user {
-  font-weight: bold;
-  color: #0a1f44;
-}
+    button {
+      width: 100%;
+      margin-top: 10px;
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+      cursor: pointer;
+      background: #1f6fff;
+      color: white;
+    }
 
-.tutor {
-  color: #222;
-}
+    button.secondary {
+      background: #444;
+    }
 
-footer {
-  display: flex;
-  gap: 8px;
-  padding: 12px;
-  border-top: 1px solid #ddd;
-}
-
-textarea {
-  flex: 1;
-  padding: 10px;
-  border-radius: 6px;
-}
-
-button {
-  padding: 10px 14px;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: bold;
-}
-
-#send { background: #c9a14a; }
-#mic  { background: #0a1f44; color: #c9a14a; }
-</style>
+    .response {
+      margin-top: 12px;
+      background: #111a3a;
+      padding: 10px;
+      border-radius: 8px;
+      min-height: 60px;
+      font-size: 14px;
+      overflow-y: auto;
+    }
+  </style>
 </head>
 
 <body>
+  <div class="container">
+    <h1>🎓 Aula MagicBank</h1>
 
-<header>
-MagicBank Academy · Cocina Avanzada
-</header>
+    <textarea id="inputText" placeholder="Escribe o usa el micrófono..."></textarea>
 
-<div id="chat"></div>
+    <button onclick="startVoice()">🎤 Hablar</button>
+    <button class="secondary" onclick="sendText()">Enviar al Tutor</button>
 
-<footer>
-<textarea id="input" placeholder="Escribe o habla…"></textarea>
-<button id="mic">🎤</button>
-<button id="send">Enviar</button>
-</footer>
+    <div class="response" id="responseBox">
+      Esperando respuesta...
+    </div>
+  </div>
 
-<script>
-const chat = document.getElementById("chat");
-const input = document.getElementById("input");
+  <script>
+    const API_URL = "https://magic-bank-backend-production-713e.up.railway.app/api/magicbank/aula/texto";
 
-const BACKEND =
-"https://magic-bank-backend-production-713e.up.railway.app/api/magicbank/aula/texto";
+    function startVoice() {
+      if (!('webkitSpeechRecognition' in window)) {
+        alert("El navegador no soporta reconocimiento de voz");
+        return;
+      }
 
-// PERFIL DE VOZ POR CURSO
-const VOICE_PROFILE = {
-  lang: "es-ES",
-  rate: 0.9,
-  pitch: 1,
-  volume: 1
-};
+      const recognition = new webkitSpeechRecognition();
+      recognition.lang = "es-ES";
+      recognition.continuous = false;
+      recognition.interimResults = false;
 
-function addMsg(text, cls) {
-  const div = document.createElement("div");
-  div.className = "msg " + cls;
-  div.textContent = text;
-  chat.appendChild(div);
-  chat.scrollTop = chat.scrollHeight;
-}
+      recognition.onresult = (event) => {
+        document.getElementById("inputText").value =
+          event.results[0][0].transcript;
+      };
 
-function speak(text) {
-  if (!window.speechSynthesis) return;
-  const utter = new SpeechSynthesisUtterance(text);
-  utter.lang = VOICE_PROFILE.lang;
-  utter.rate = VOICE_PROFILE.rate;
-  utter.pitch = VOICE_PROFILE.pitch;
-  utter.volume = VOICE_PROFILE.volume;
-  speechSynthesis.speak(utter);
-}
+      recognition.start();
+    }
 
-async function sendMessage(msg) {
-  addMsg("Tú: " + msg, "user");
+    async function sendText() {
+      const text = document.getElementById("inputText").value;
+      const responseBox = document.getElementById("responseBox");
 
-  const res = await fetch(BACKEND, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      course_id: "cocina_avanzada",
-      message: msg,
-      profile: { preferred_name: "Gustavo" }
-    })
-  });
+      if (!text.trim()) {
+        responseBox.innerText = "⚠️ Escribe o dicta un mensaje";
+        return;
+      }
 
-  const data = await res.json();
-  if (data.text) {
-    addMsg("Tutor: " + data.text, "tutor");
-    speak(data.text);
-  }
-}
+      responseBox.innerText = "⏳ Procesando...";
 
-document.getElementById("send").onclick = () => {
-  const msg = input.value.trim();
-  if (!msg) return;
-  input.value = "";
-  sendMessage(msg);
-};
+      try {
+        const res = await fetch(API_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            message: text,
+            profile: "estudiante",
+            course_id: "aula-magicbank"
+          })
+        });
 
-// 🎤 MICRÓFONO
-const SpeechRecognition =
-  window.SpeechRecognition || window.webkitSpeechRecognition;
+        const data = await res.json();
+        responseBox.innerText =
+          data.response || JSON.stringify(data, null, 2);
 
-if (SpeechRecognition) {
-  const rec = new SpeechRecognition();
-  rec.lang = "es-ES";
-  rec.onresult = e => input.value = e.results[0][0].transcript;
-  document.getElementById("mic").onclick = () => rec.start();
-}
-</script>
-
+      } catch (error) {
+        responseBox.innerText = "❌ Error de conexión con el backend";
+        console.error(error);
+      }
+    }
+  </script>
 </body>
 </html>
